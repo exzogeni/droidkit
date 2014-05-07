@@ -1,0 +1,17 @@
+-keepattributes Signature
+-keepattributes Exceptions
+
+-keep public interface com.exzogeni.dk.** { *; }
+
+-keep public class com.exzogeni.dk.** {
+  public static <fields>;
+  public static <methods>;
+  public <methods>;
+  protected <methods>;
+}
+
+-keep public enum com.exzogeni.dk.** {
+  public static <fields>;
+  public static <methods>;
+  public <methods>;
+}
