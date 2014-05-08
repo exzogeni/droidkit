@@ -26,18 +26,22 @@ import java.util.concurrent.Future;
  */
 public class AsyncQueue {
 
+  @NonNull
   public static AsyncQueue get() {
     return Holder.INSTANCE;
   }
 
+  @NonNull
   public static AsyncQueue serial() {
-    return SerialAsyncQueue.getInstance();
+    return SerialQueue.getInstance();
   }
 
+  @NonNull
   public static AsyncQueue main() {
     return MainQueue.getInstance();
   }
 
+  @NonNull
   public <V> Future<V> submit(@NonNull Callable<V> task) {
     return CorePoolExecutor.get().submit(task);
   }

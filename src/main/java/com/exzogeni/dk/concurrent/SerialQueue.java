@@ -26,21 +26,22 @@ import java.util.concurrent.Future;
 /**
  * @author Daniel Serdyukov
  */
-class SerialAsyncQueue extends AsyncQueue {
+class SerialQueue extends AsyncQueue {
 
   private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
 
-  public static SerialAsyncQueue getInstance() {
+  public static SerialQueue getInstance() {
     return Holder.INSTANCE;
   }
 
   @Override
+  @NonNull
   public <V> Future<V> submit(@NonNull Callable<V> task) {
     return mExecutor.submit(task);
   }
 
   private static final class Holder {
-    public static final SerialAsyncQueue INSTANCE = new SerialAsyncQueue();
+    public static final SerialQueue INSTANCE = new SerialQueue();
   }
 
 }

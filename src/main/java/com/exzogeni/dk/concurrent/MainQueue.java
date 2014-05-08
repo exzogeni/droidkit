@@ -39,6 +39,7 @@ class MainQueue extends AsyncQueue {
   }
 
   @Override
+  @NonNull
   public <V> Future<V> submit(@NonNull Callable<V> task) {
     final FutureTask<V> futureTask = new FutureTask<>(task);
     final Future<V> future = new MainFuture<>(futureTask);
