@@ -36,6 +36,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -49,6 +51,8 @@ public abstract class HttpTask<V> implements Callable<V> {
   private final AtomicInteger mStatusCode = new AtomicInteger();
 
   private final int mSequence = SEQUENCE.incrementAndGet();
+
+  private final Map<String, List<String>> mHeaders = new ConcurrentHashMap<>();
 
   private final String mUrl;
 
@@ -104,6 +108,18 @@ public abstract class HttpTask<V> implements Callable<V> {
   }
 
   @NonNull
+  public HttpTask<V> addHeader(@NonNull String key, @NonNull String... values) {
+    List<String> headers = mHeaders.get(key);
+    if (headers == null) {
+      headers = new CopyOnWriteArrayList<>();
+      mHeaders.put(key, headers);
+    }
+    headers.clear();
+    Collections.addAll(headers, values);
+    return this;
+  }
+
+  @NonNull
   public Future<V> submit() {
     return mManager.submit(this);
   }
@@ -113,9 +129,9 @@ public abstract class HttpTask<V> implements Callable<V> {
     final long startTime = SystemClock.uptimeMillis();
     final HttpURLConnection cn = openConnection();
     try {
-      onPrepareConnection(cn);
+      onPrepareConnectionInternal(cn);
       onPerformRequest(cn);
-      return onSuccess(cn);
+      return onSuccessInternal(cn);
     } finally {
       cn.disconnect();
       mManager.log(this, (SystemClock.uptimeMillis() - startTime), HttpStatus.getStatusLine(mStatusCode.get()));
@@ -143,9 +159,7 @@ public abstract class HttpTask<V> implements Callable<V> {
   }
 
   protected void onPrepareConnection(HttpURLConnection cn) throws Exception {
-    cn.setRequestMethod(getMethodName());
-    cn.setConnectTimeout(mTimeoutMs);
-    cn.setReadTimeout(mTimeoutMs);
+
   }
 
   protected void onPerformRequest(HttpURLConnection cn) throws Exception {
@@ -154,6 +168,10 @@ public abstract class HttpTask<V> implements Callable<V> {
 
   void setHttpManager(@NonNull HttpManager manager) {
     mManager = manager;
+  }
+
+  void addHeaders(@NonNull Map<String, List<String>> headers) {
+    mHeaders.putAll(headers);
   }
 
   private HttpException onException(HttpException e) {
@@ -171,8 +189,27 @@ public abstract class HttpTask<V> implements Callable<V> {
     return mEncodedUrl;
   }
 
+  private void onPrepareConnectionInternal(HttpURLConnection cn) throws Exception {
+    final URI uri = cn.getURL().toURI();
+    cn.setRequestMethod(getMethodName());
+    cn.setConnectTimeout(mTimeoutMs);
+    cn.setReadTimeout(mTimeoutMs);
+    final Map<String, List<String>> cookies = mManager.getCookies(uri, Collections.<String, List<String>>emptyMap());
+    for (final Map.Entry<String, List<String>> cookie : cookies.entrySet()) {
+      for (final String value : cookie.getValue()) {
+        cn.addRequestProperty(cookie.getKey(), value);
+      }
+    }
+    for (final Map.Entry<String, List<String>> header : mHeaders.entrySet()) {
+      for (final String value : header.getValue()) {
+        cn.addRequestProperty(header.getKey(), value);
+      }
+    }
+    onPrepareConnection(cn);
+  }
+
   @SuppressWarnings("checkstyle:illegalcatch")
-  private V onSuccess(HttpURLConnection cn) throws Exception {
+  private V onSuccessInternal(HttpURLConnection cn) throws Exception {
     try {
       mStatusCode.compareAndSet(mStatusCode.get(), cn.getResponseCode());
       final URI uri = cn.getURL().toURI();
