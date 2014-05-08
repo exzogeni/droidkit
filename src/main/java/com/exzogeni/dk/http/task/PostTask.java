@@ -14,31 +14,33 @@
  * limitations under the License.
  */
 
-package com.exzogeni.dk.concurrent;
+package com.exzogeni.dk.http.task;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import android.support.annotation.NonNull;
+
+import com.exzogeni.dk.http.Http;
+
+import java.net.HttpURLConnection;
 
 /**
  * @author Daniel Serdyukov
  */
-public final class CorePoolExecutor extends ThreadPoolExecutor {
+class PostTask<V> extends HeadTask<V> {
 
-  private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
-
-  private CorePoolExecutor() {
-    super(CPU_COUNT + 1, CPU_COUNT * 2 + 1, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>());
+  protected PostTask(@NonNull String url) {
+    super(url);
   }
 
-  public static CorePoolExecutor get() {
-    return InstanceHolder.INSTANCE;
+  @NonNull
+  @Override
+  protected String getMethodName() {
+    return Http.Method.POST;
   }
 
-  private static final class InstanceHolder {
-
-    public static final CorePoolExecutor INSTANCE = new CorePoolExecutor();
-
+  @Override
+  protected void onPrepareConnection(HttpURLConnection cn) throws Exception {
+    super.onPrepareConnection(cn);
+    cn.setDoOutput(true);
   }
 
 }
