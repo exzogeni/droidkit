@@ -14,33 +14,10 @@
  * limitations under the License.
  */
 
-package com.exzogeni.dk.http.cache;
-
-import java.net.URI;
-import java.util.List;
-import java.util.Map;
+package com.exzogeni.dk.http.task;
 
 /**
  * @author Daniel Serdyukov
  */
-public interface CachePolicy {
-
-  CachePolicy NO_CACHE = new CachePolicy() {
-
-    @Override
-    public boolean shouldCache(URI uri) {
-      return false;
-    }
-
-    @Override
-    public long acceptCache(URI uri, Map<String, List<String>> headers) {
-      return 0;
-    }
-
-  };
-
-  boolean shouldCache(URI uri);
-
-  long acceptCache(URI uri, Map<String, List<String>> headers);
-
+public interface RetryPolicy {
 }
