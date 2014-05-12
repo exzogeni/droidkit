@@ -16,17 +16,19 @@
 
 package com.exzogeni.dk.log.appender;
 
+import android.support.annotation.NonNull;
+
 /**
  * @author Daniel Serdyukov
  */
 public interface LogAppender {
 
-  void debug(String tag, String message);
+  void debug(@NonNull String tag, @NonNull String message);
 
-  void info(String tag, String message);
+  void info(@NonNull String tag, @NonNull String message);
 
-  void warn(String tag, String message);
+  void warn(@NonNull String tag, @NonNull String message);
 
-  void error(String tag, String message);
+  void error(@NonNull String tag, @NonNull String message);
 
 }

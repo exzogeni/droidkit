@@ -16,6 +16,8 @@
 
 package com.exzogeni.dk.log.formatter;
 
+import android.support.annotation.NonNull;
+
 /**
  * @author Daniel Serdyukov
  */
@@ -23,8 +25,9 @@ public interface LogFormatter {
 
   LogFormatter SIMPLE = new SimpleLogFormatter();
 
-  String format(Thread thread, StackTraceElement caller, String format, Object... args);
+  String format(@NonNull Thread thread, @NonNull StackTraceElement caller, @NonNull String format,
+                Object... args);
 
-  String format(Thread thread, StackTraceElement caller, Throwable e);
+  String format(@NonNull Thread thread, @NonNull StackTraceElement caller, @NonNull Throwable e);
 
 }

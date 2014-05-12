@@ -16,6 +16,8 @@
 
 package com.exzogeni.dk.log;
 
+import android.support.annotation.NonNull;
+
 import com.exzogeni.dk.log.appender.LogAppender;
 import com.exzogeni.dk.log.formatter.LogFormatter;
 import com.exzogeni.dk.log.policy.LogPolicy;
@@ -45,32 +47,29 @@ public class LogManager {
     this(LogPolicy.LOG_NONE);
   }
 
-  public LogManager(LogPolicy policy) {
+  public LogManager(@NonNull LogPolicy policy) {
     this(policy, LogFormatter.SIMPLE);
   }
 
-  public LogManager(LogPolicy policy, LogFormatter formatter) {
-    if (policy == null) {
-      throw new IllegalArgumentException("LogPolicy is null");
-    }
-    if (formatter == null) {
-      throw new IllegalArgumentException("LogFormatter is null");
-    }
+  public LogManager(@NonNull LogPolicy policy, @NonNull LogFormatter formatter) {
     mPolicy = policy;
     mFormatter = formatter;
   }
 
-  public LogManager setLogTag(String logTag) {
+  @NonNull
+  public LogManager setLogTag(@NonNull String logTag) {
     mLogTag.compareAndSet(mLogTag.get(), logTag);
     return this;
   }
 
+  @NonNull
   public LogManager setEnabled(boolean enabled) {
     mEnabled.compareAndSet(mEnabled.get(), enabled);
     return this;
   }
 
-  public LogManager addAppenders(LogAppender... appenders) {
+  @NonNull
+  public LogManager addAppenders(@NonNull LogAppender... appenders) {
     Collections.addAll(mAppenders, appenders);
     return this;
   }

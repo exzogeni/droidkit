@@ -16,6 +16,8 @@
 
 package com.exzogeni.dk.log.formatter;
 
+import android.support.annotation.NonNull;
+
 import org.apache.commons.io.IOUtils;
 
 import java.io.BufferedWriter;
@@ -35,7 +37,8 @@ public class SimpleLogFormatter implements LogFormatter {
   }
 
   @Override
-  public String format(Thread thread, StackTraceElement caller, String format, Object... args) {
+  public String format(@NonNull Thread thread, @NonNull StackTraceElement caller, @NonNull String format,
+                       Object... args) {
     final StringBuilder message = newMessageBuilder(thread, caller);
     if (args.length > 0) {
       message.append(String.format(Locale.US, format, args));
@@ -46,7 +49,7 @@ public class SimpleLogFormatter implements LogFormatter {
   }
 
   @Override
-  public String format(Thread thread, StackTraceElement caller, Throwable e) {
+  public String format(@NonNull Thread thread, @NonNull StackTraceElement caller, @NonNull Throwable e) {
     final StringBuilder message = newMessageBuilder(thread, caller);
     final StringWriter trace = new StringWriter();
     final PrintWriter traceWriter = new PrintWriter(new BufferedWriter(trace, 512), true);

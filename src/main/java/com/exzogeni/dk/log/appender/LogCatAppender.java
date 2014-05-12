@@ -16,6 +16,7 @@
 
 package com.exzogeni.dk.log.appender;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 /**
@@ -24,22 +25,22 @@ import android.util.Log;
 public class LogCatAppender implements LogAppender {
 
   @Override
-  public void debug(String tag, String message) {
+  public void debug(@NonNull String tag, @NonNull String message) {
     Log.d(tag, message);
   }
 
   @Override
-  public void info(String tag, String message) {
+  public void info(@NonNull String tag, @NonNull String message) {
     Log.i(tag, message);
   }
 
   @Override
-  public void warn(String tag, String message) {
+  public void warn(@NonNull String tag, @NonNull String message) {
     Log.w(tag, message);
   }
 
   @Override
-  public void error(String tag, String message) {
+  public void error(@NonNull String tag, @NonNull String message) {
     Log.e(tag, message);
   }
 

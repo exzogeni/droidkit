@@ -16,6 +16,9 @@
 
 package com.exzogeni.dk.log;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -33,31 +36,31 @@ public final class Logger {
   private Logger() {
   }
 
-  public static void setLogManager(LogManager lm) {
+  public static void setLogManager(@NonNull LogManager lm) {
     LOG_MANAGER_REF.compareAndSet(LOG_MANAGER_REF.get(), lm);
   }
 
-  public static void quiet(String format, Object... args) {
+  public static void quiet(@Nullable String format, Object... args) {
 
   }
 
-  public static void debug(String format, Object... args) {
+  public static void debug(@NonNull String format, Object... args) {
     LOG_MANAGER_REF.get().debug(Thread.currentThread(), obtainCaller(), format, args);
   }
 
-  public static void info(String format, Object... args) {
+  public static void info(@NonNull String format, Object... args) {
     LOG_MANAGER_REF.get().info(Thread.currentThread(), obtainCaller(), format, args);
   }
 
-  public static void warn(String format, Object... args) {
+  public static void warn(@NonNull String format, Object... args) {
     LOG_MANAGER_REF.get().warn(Thread.currentThread(), obtainCaller(), format, args);
   }
 
-  public static void error(String format, Object... args) {
+  public static void error(@NonNull String format, Object... args) {
     LOG_MANAGER_REF.get().error(Thread.currentThread(), obtainCaller(), format, args);
   }
 
-  public static void error(Throwable e) {
+  public static void error(@NonNull Throwable e) {
     LOG_MANAGER_REF.get().error(Thread.currentThread(), obtainCaller(), e);
   }
 

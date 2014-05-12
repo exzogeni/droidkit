@@ -21,6 +21,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.media.ExifInterface;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
 import com.exzogeni.dk.io.BufferPoolInputStream;
@@ -43,23 +44,27 @@ public final class Bitmaps {
   private Bitmaps() {
   }
 
-  public static Bitmap decodeFile(String filePath, int hwSize) {
+  @Nullable
+  public static Bitmap decodeFile(@NonNull String filePath, int hwSize) {
     return decodeFile(filePath, hwSize, true);
   }
 
-  public static Bitmap decodeFile(String filePath, int hwSize, boolean exif) {
+  @Nullable
+  public static Bitmap decodeFile(@NonNull String filePath, int hwSize, boolean exif) {
     final Bitmap bitmap = decodeFileInternal(filePath, hwSize);
-    if (exif) {
+    if (bitmap != null && exif) {
       return applyExif(bitmap, filePath);
     }
     return bitmap;
   }
 
-  public static Bitmap decodeStream(InputStream stream, int hwSize) {
+  @Nullable
+  public static Bitmap decodeStream(@NonNull InputStream stream, int hwSize) {
     return decodeStream(stream, null, hwSize);
   }
 
-  public static Bitmap decodeStream(InputStream stream, Rect outPadding, int hwSize) {
+  @Nullable
+  public static Bitmap decodeStream(@NonNull InputStream stream, Rect outPadding, int hwSize) {
     if (hwSize > 0) {
       final InputStream localIn = new BufferPoolInputStream(stream);
       try {
@@ -94,6 +99,7 @@ public final class Bitmaps {
     return 1;
   }
 
+  @Nullable
   private static Bitmap decodeFileInternal(String filePath, int hwSize) {
     if (hwSize > 0) {
       final BitmapFactory.Options ops = new BitmapFactory.Options();
@@ -106,10 +112,8 @@ public final class Bitmaps {
     return BitmapFactory.decodeFile(filePath);
   }
 
-  private static Bitmap applyExif(@Nullable Bitmap bitmap, String exifFilePath) {
-    if (bitmap == null) {
-      return bitmap;
-    }
+  @Nullable
+  private static Bitmap applyExif(@NonNull Bitmap bitmap, String exifFilePath) {
     final int orientation = getExifOrientation(exifFilePath);
     if (orientation == ExifInterface.ORIENTATION_NORMAL
         || orientation == ExifInterface.ORIENTATION_UNDEFINED) {
@@ -138,6 +142,7 @@ public final class Bitmaps {
     return ExifInterface.ORIENTATION_UNDEFINED;
   }
 
+  @NonNull
   private static Matrix getExifMatrix(int orientation) {
     final Matrix matrix = new Matrix();
     if (orientation == ExifInterface.ORIENTATION_ROTATE_180) {
