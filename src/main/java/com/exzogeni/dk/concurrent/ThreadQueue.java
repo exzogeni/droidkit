@@ -16,31 +16,19 @@
 
 package com.exzogeni.dk.concurrent;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import android.support.annotation.NonNull;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 
 /**
  * @author Daniel Serdyukov
  */
-public final class CorePoolExecutor extends ThreadPoolExecutor {
+public interface ThreadQueue {
 
-  private static final int CPU_COUNT = Runtime.getRuntime().availableProcessors();
+  @NonNull
+  <V> Future<V> submit(@NonNull Callable<V> task);
 
-  private CorePoolExecutor() {
-    super(CPU_COUNT + 1, CPU_COUNT * 2 + 1, 10, TimeUnit.SECONDS,
-        new LinkedBlockingQueue<Runnable>(),
-        new NamedThreadFactory("async"));
-  }
-
-  public static CorePoolExecutor get() {
-    return InstanceHolder.INSTANCE;
-  }
-
-  private static final class InstanceHolder {
-
-    public static final CorePoolExecutor INSTANCE = new CorePoolExecutor();
-
-  }
+  void execute(@NonNull Runnable task);
 
 }

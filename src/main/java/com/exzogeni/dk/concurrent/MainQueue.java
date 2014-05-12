@@ -30,49 +30,41 @@ import java.util.concurrent.TimeoutException;
 /**
  * @author Daniel Serdyukov
  */
-class MainQueue extends AsyncQueue {
+public class MainQueue implements ThreadQueue {
 
   private final Handler mHandler = new Handler(Looper.getMainLooper());
 
-  public static MainQueue getInstance() {
+  public static MainQueue get() {
     return Holder.INSTANCE;
   }
 
-  @Override
   @NonNull
+  @Override
   public <V> Future<V> submit(@NonNull Callable<V> task) {
-    final FutureTask<V> futureTask = new FutureTask<>(task);
-    final Future<V> future = new MainFuture<>(futureTask);
-    mHandler.post(futureTask);
+    final FutureTask<V> future = new FutureImpl<>(task);
+    mHandler.post(future);
     return future;
+  }
+
+  @Override
+  public void execute(@NonNull Runnable task) {
+    mHandler.post(task);
   }
 
   private static final class Holder {
     public static final MainQueue INSTANCE = new MainQueue();
   }
 
-  private final class MainFuture<V> implements Future<V> {
+  private final class FutureImpl<V> extends FutureTask<V> {
 
-    private final FutureTask<V> mTask;
-
-    private MainFuture(FutureTask<V> task) {
-      mTask = task;
+    public FutureImpl(Callable<V> callable) {
+      super(callable);
     }
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-      mHandler.removeCallbacks(mTask);
-      return mTask.cancel(false);
-    }
-
-    @Override
-    public boolean isCancelled() {
-      return mTask.isCancelled();
-    }
-
-    @Override
-    public boolean isDone() {
-      return mTask.isDone();
+      mHandler.removeCallbacks(this);
+      return super.cancel(false);
     }
 
     @Override

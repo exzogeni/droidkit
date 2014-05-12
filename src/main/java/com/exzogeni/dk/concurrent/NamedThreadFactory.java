@@ -18,31 +18,35 @@ package com.exzogeni.dk.concurrent;
 
 import android.support.annotation.NonNull;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Daniel Serdyukov
  */
-public class AsyncQueue implements ThreadQueue {
+public class NamedThreadFactory implements ThreadFactory {
 
-  public static AsyncQueue get() {
-    return Holder.INSTANCE;
+  private final AtomicInteger mSequence = new AtomicInteger();
+
+  private final String mThreadName;
+
+  private ThreadGroup mThreadGroup;
+
+  public NamedThreadFactory() {
+    this("thread");
+  }
+
+  public NamedThreadFactory(String threadName) {
+    mThreadName = threadName;
+    final SecurityManager sm = System.getSecurityManager();
+    if (sm != null) {
+      mThreadGroup = sm.getThreadGroup();
+    }
   }
 
   @Override
-  @NonNull
-  public <V> Future<V> submit(@NonNull Callable<V> task) {
-    return CorePoolExecutor.get().submit(task);
-  }
-
-  @Override
-  public void execute(@NonNull Runnable task) {
-    CorePoolExecutor.get().execute(task);
-  }
-
-  private static final class Holder {
-    public static final AsyncQueue INSTANCE = new AsyncQueue();
+  public Thread newThread(@NonNull Runnable r) {
+    return new Thread(mThreadGroup, r, mThreadName + " #" + mSequence.incrementAndGet(), 0);
   }
 
 }
