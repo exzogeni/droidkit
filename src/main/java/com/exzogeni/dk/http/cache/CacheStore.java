@@ -14,33 +14,30 @@
  * limitations under the License.
  */
 
-package com.exzogeni.dk.http.task;
+package com.exzogeni.dk.http.cache;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
-import com.exzogeni.dk.http.Http;
-
-import java.net.HttpURLConnection;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Daniel Serdyukov
  */
-class PostTask<V> extends HeadTask<V> {
+public interface CacheStore {
 
-  protected PostTask(@NonNull String url) {
-    super(url);
-  }
+  @Nullable
+  InputStream get(@NonNull URI uri, @Nullable Map<String, List<String>> headers) throws IOException;
 
   @NonNull
-  @Override
-  protected String getMethodName() {
-    return Http.Method.POST;
-  }
+  InputStream put(@NonNull URI uri, @NonNull Map<String, List<String>> headers, @NonNull InputStream content,
+                  long maxAge) throws IOException;
 
-  @Override
-  protected void onPrepareConnection(@NonNull HttpURLConnection cn) throws Exception {
-    super.onPrepareConnection(cn);
-    cn.setDoOutput(true);
-  }
+  @NonNull
+  InputStream update(@NonNull URI uri, @NonNull Map<String, List<String>> headers, long maxAge) throws IOException;
 
 }

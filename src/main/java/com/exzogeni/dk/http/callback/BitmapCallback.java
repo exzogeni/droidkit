@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-package com.exzogeni.dk.http.task;
+package com.exzogeni.dk.http.callback;
 
+import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
 
-import com.exzogeni.dk.http.Http;
+import com.exzogeni.dk.graphics.Bitmaps;
+import com.exzogeni.dk.http.HttpException;
+import com.exzogeni.dk.log.Logger;
 
-import java.net.HttpURLConnection;
+import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Daniel Serdyukov
  */
-class PostTask<V> extends HeadTask<V> {
+public class BitmapCallback implements HttpCallback<Bitmap> {
 
-  protected PostTask(@NonNull String url) {
-    super(url);
-  }
-
-  @NonNull
   @Override
-  protected String getMethodName() {
-    return Http.Method.POST;
+  public Bitmap onSuccess(int statusCode, @NonNull Map<String, List<String>> headers, @NonNull InputStream content)
+      throws Exception {
+    return Bitmaps.decodeStream(content, 256);
   }
 
   @Override
-  protected void onPrepareConnection(@NonNull HttpURLConnection cn) throws Exception {
-    super.onPrepareConnection(cn);
-    cn.setDoOutput(true);
+  public void onException(@NonNull HttpException e) {
+    Logger.error(e);
   }
 
 }

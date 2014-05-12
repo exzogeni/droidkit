@@ -19,21 +19,19 @@ package com.exzogeni.dk.http;
 import android.support.annotation.NonNull;
 
 import com.exzogeni.dk.concurrent.AsyncQueue;
+import com.exzogeni.dk.http.cache.CacheManager;
 import com.exzogeni.dk.http.task.HttpFactory;
 import com.exzogeni.dk.log.Logger;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.CookieManager;
-import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author Daniel Serdyukov
@@ -42,29 +40,44 @@ public class HttpManager {
 
   private static final long SLOW_LOG_THRESHOLD = 3000;
 
-  private final ReentrantLock mConfigLock = new ReentrantLock();
-
   private final AtomicInteger mTimeoutMs = new AtomicInteger(30000);
+
+  private final AtomicBoolean mLogging = new AtomicBoolean();
 
   private final AsyncQueue mAsyncQueue;
 
   private final HttpFactory mFactory;
 
+  private final CookieManager mCookieManager;
+
+  private final CacheManager mCacheManager;
+
   private final Map<String, List<String>> mHeaders = new ConcurrentHashMap<>();
 
-  private CookieManager mCookieManager = new CookieManager();
-
   public HttpManager() {
-    this(HttpFactory.DEFAULT);
+    this(AsyncQueue.get());
   }
 
-  public HttpManager(@NonNull HttpFactory factory) {
-    this(AsyncQueue.get(), factory);
+  public HttpManager(@NonNull AsyncQueue queue) {
+    this(queue, new CookieManager(), new CacheManager());
   }
 
-  public HttpManager(@NonNull AsyncQueue queue, @NonNull HttpFactory factory) {
+  public HttpManager(@NonNull CookieManager cookieManager,
+                     @NonNull CacheManager cacheManager) {
+    this(AsyncQueue.get(), cookieManager, cacheManager);
+  }
+
+  public HttpManager(@NonNull AsyncQueue queue, @NonNull CookieManager cookieManager,
+                     @NonNull CacheManager cacheManager) {
+    this(queue, HttpFactory.DEFAULT, cookieManager, cacheManager);
+  }
+
+  public HttpManager(@NonNull AsyncQueue queue, @NonNull HttpFactory factory, @NonNull CookieManager cookieManager,
+                     @NonNull CacheManager cacheManager) {
     mAsyncQueue = queue;
     mFactory = factory;
+    mCookieManager = cookieManager;
+    mCacheManager = cacheManager;
   }
 
   public HttpManager setTimeoutMs(int timeoutMs) {
@@ -73,17 +86,6 @@ public class HttpManager {
       return this;
     }
     throw new IllegalArgumentException("timeoutMs must be positive int");
-  }
-
-  @NonNull
-  public HttpManager setCookieManager(@NonNull CookieManager manager) {
-    mConfigLock.lock();
-    try {
-      mCookieManager = manager;
-    } finally {
-      mConfigLock.unlock();
-    }
-    return this;
   }
 
   @NonNull
@@ -98,7 +100,13 @@ public class HttpManager {
     return this;
   }
 
-  // Hidden API
+  @NonNull
+  public HttpManager setLoggingEnabled(boolean enabled) {
+    mLogging.compareAndSet(mLogging.get(), enabled);
+    return this;
+  }
+
+  //@hide
 
   <V> HttpTask<V> newTask(@NonNull String method, @NonNull String url) {
     final HttpTask<V> task = mFactory.newHttpTask(method, url);
@@ -113,37 +121,24 @@ public class HttpManager {
     return mAsyncQueue.submit(task);
   }
 
-  @NonNull
-  Map<String, List<String>> getCookies(@NonNull URI uri, @NonNull Map<String, List<String>> headers)
-      throws IOException {
-    mConfigLock.lock();
-    try {
-      return mCookieManager.get(uri, headers);
-    } finally {
-      mConfigLock.unlock();
-    }
-  }
-
-  void saveCookies(@NonNull URI uri, @NonNull Map<String, List<String>> headers) throws IOException {
-    mConfigLock.lock();
-    try {
-      mCookieManager.put(uri, headers);
-    } finally {
-      mConfigLock.unlock();
-    }
-  }
-
-  InputStream saveToCache(@NonNull URI uri, int statusCode, @NonNull Map<String, List<String>> headers,
-                          @NonNull InputStream content) {
-    return content;
-  }
-
   void log(@NonNull HttpTask<?> task, long execTime, String statusLine) {
-    if (execTime > SLOW_LOG_THRESHOLD) {
-      Logger.error("%s - %s [%d ms] SLOW REQUEST", task, statusLine, execTime);
-    } else {
-      Logger.info("%s - %s [%d ms]", task, statusLine, execTime);
+    if (mLogging.get()) {
+      if (execTime > SLOW_LOG_THRESHOLD) {
+        Logger.error("%s - %s [%d ms] SLOW REQUEST", task, statusLine, execTime);
+      } else {
+        Logger.info("%s - %s [%d ms]", task, statusLine, execTime);
+      }
     }
+  }
+
+  @NonNull
+  CookieManager getCookieManager() {
+    return mCookieManager;
+  }
+
+  @NonNull
+  CacheManager getCacheManager() {
+    return mCacheManager;
   }
 
 }

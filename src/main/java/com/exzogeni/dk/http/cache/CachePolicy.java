@@ -14,33 +14,35 @@
  * limitations under the License.
  */
 
-package com.exzogeni.dk.http.task;
+package com.exzogeni.dk.http.cache;
 
 import android.support.annotation.NonNull;
 
-import com.exzogeni.dk.http.Http;
-
-import java.net.HttpURLConnection;
+import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Daniel Serdyukov
  */
-class PostTask<V> extends HeadTask<V> {
+public interface CachePolicy {
 
-  protected PostTask(@NonNull String url) {
-    super(url);
-  }
+  CachePolicy NO_CACHE = new CachePolicy() {
+    @Override
+    public boolean shouldCache(@NonNull URI uri) {
+      return false;
+    }
 
-  @NonNull
-  @Override
-  protected String getMethodName() {
-    return Http.Method.POST;
-  }
+    @Override
+    public long maxAge(@NonNull Map<String, List<String>> headers) {
+      return 0;
+    }
+  };
 
-  @Override
-  protected void onPrepareConnection(@NonNull HttpURLConnection cn) throws Exception {
-    super.onPrepareConnection(cn);
-    cn.setDoOutput(true);
-  }
+  CachePolicy DEFAULT = new DefaultCachePolicy();
+
+  boolean shouldCache(@NonNull URI uri);
+
+  long maxAge(@NonNull Map<String, List<String>> headers);
 
 }

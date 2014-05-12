@@ -21,16 +21,19 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import com.exzogeni.dk.http.cache.CacheManager;
+import com.exzogeni.dk.http.cache.CachePolicy;
 import com.exzogeni.dk.http.callback.HttpCallback;
+import com.exzogeni.dk.log.Logger;
 
 import org.apache.commons.io.IOUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.CookieManager;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -56,18 +59,28 @@ public abstract class HttpTask<V> implements Callable<V> {
 
   private final String mUrl;
 
-  private HttpManager mManager;
+  private HttpManager mHttpManager;
 
   private HttpCallback<V> mCallback;
+
+  private CachePolicy mCachePolicy;
 
   private int mTimeoutMs;
 
   private String mEncodedUrl;
 
+  private URI mEncodedUri;
+
   protected HttpTask(@NonNull String url) {
-    mUrl = url;
+    this(url, CachePolicy.DEFAULT);
   }
 
+  protected HttpTask(@NonNull String url, @NonNull CachePolicy policy) {
+    mUrl = url;
+    mCachePolicy = policy;
+  }
+
+  @NonNull
   private static Map<String, List<String>> getHeaderFields(HttpURLConnection cn) {
     final Map<String, List<String>> headers = cn.getHeaderFields();
     if (headers != null) {
@@ -78,6 +91,7 @@ public abstract class HttpTask<V> implements Callable<V> {
     return Collections.emptyMap();
   }
 
+  @NonNull
   private static InputStream getInputStream(HttpURLConnection cn) {
     try {
       return cn.getInputStream();
@@ -120,21 +134,38 @@ public abstract class HttpTask<V> implements Callable<V> {
   }
 
   @NonNull
+  public HttpTask<V> setCachePolicy(@NonNull CachePolicy policy) {
+    mCachePolicy = policy;
+    return this;
+  }
+
+  @NonNull
   public Future<V> submit() {
-    return mManager.submit(this);
+    return mHttpManager.submit(this);
   }
 
   @Override
   public V call() throws Exception {
     final long startTime = SystemClock.uptimeMillis();
-    final HttpURLConnection cn = openConnection();
     try {
-      onPrepareConnectionInternal(cn);
-      onPerformRequest(cn);
-      return onSuccessInternal(cn);
+      final URI uri = getEncodedUriInternal();
+      if (mCachePolicy == null || mCachePolicy.shouldCache(uri)) {
+        final CacheManager cm = mHttpManager.getCacheManager();
+        final Map<String, List<String>> headers = new HashMap<>();
+        final InputStream content = cm.get(uri, headers);
+        if (content != null) {
+          return onSuccessInternal(
+              HttpURLConnection.HTTP_NOT_MODIFIED,
+              Collections.<String, List<String>>emptyMap(),
+              content
+          );
+        } else {
+          mHeaders.putAll(headers);
+        }
+      }
+      return onPerformNetworkRequest(uri);
     } finally {
-      cn.disconnect();
-      mManager.log(this, (SystemClock.uptimeMillis() - startTime), HttpStatus.getStatusLine(mStatusCode.get()));
+      mHttpManager.log(this, (SystemClock.uptimeMillis() - startTime), HttpStatus.getStatusLine(mStatusCode.get()));
     }
   }
 
@@ -149,25 +180,16 @@ public abstract class HttpTask<V> implements Callable<V> {
   @NonNull
   protected abstract String getEncodedUrl();
 
-  @NonNull
-  protected HttpURLConnection openConnection() throws Exception {
-    try {
-      return (HttpURLConnection) new URL(getEncodedUrlInternal()).openConnection();
-    } catch (IOException e) {
-      throw onException(new HttpException(getEncodedUrlInternal(), e));
-    }
-  }
-
-  protected void onPrepareConnection(HttpURLConnection cn) throws Exception {
+  protected void onPrepareConnection(@NonNull HttpURLConnection cn) throws Exception {
 
   }
 
-  protected void onPerformRequest(HttpURLConnection cn) throws Exception {
+  protected void onPerformRequest(@NonNull HttpURLConnection cn) throws Exception {
 
   }
 
   void setHttpManager(@NonNull HttpManager manager) {
-    mManager = manager;
+    mHttpManager = manager;
   }
 
   void addHeaders(@NonNull Map<String, List<String>> headers) {
@@ -189,12 +211,33 @@ public abstract class HttpTask<V> implements Callable<V> {
     return mEncodedUrl;
   }
 
+  @NonNull
+  private URI getEncodedUriInternal() {
+    if (mEncodedUri == null) {
+      mEncodedUri = URI.create(getEncodedUrlInternal());
+    }
+    return mEncodedUri;
+  }
+
+  private V onPerformNetworkRequest(URI uri) throws Exception {
+    Logger.debug("%s", uri);
+    final HttpURLConnection cn = (HttpURLConnection) uri.toURL().openConnection();
+    try {
+      onPrepareConnectionInternal(cn);
+      onPerformRequest(cn);
+      return onSuccessInternal(cn);
+    } finally {
+      cn.disconnect();
+    }
+  }
+
   private void onPrepareConnectionInternal(HttpURLConnection cn) throws Exception {
     final URI uri = cn.getURL().toURI();
     cn.setRequestMethod(getMethodName());
     cn.setConnectTimeout(mTimeoutMs);
     cn.setReadTimeout(mTimeoutMs);
-    final Map<String, List<String>> cookies = mManager.getCookies(uri, Collections.<String, List<String>>emptyMap());
+    final CookieManager cm = mHttpManager.getCookieManager();
+    final Map<String, List<String>> cookies = cm.get(uri, new HashMap<String, List<String>>());
     for (final Map.Entry<String, List<String>> cookie : cookies.entrySet()) {
       for (final String value : cookie.getValue()) {
         cn.addRequestProperty(cookie.getKey(), value);
@@ -211,20 +254,33 @@ public abstract class HttpTask<V> implements Callable<V> {
   @SuppressWarnings("checkstyle:illegalcatch")
   private V onSuccessInternal(HttpURLConnection cn) throws Exception {
     try {
-      mStatusCode.compareAndSet(mStatusCode.get(), cn.getResponseCode());
-      final URI uri = cn.getURL().toURI();
+      final URI uri = getEncodedUriInternal();
       final Map<String, List<String>> headers = getHeaderFields(cn);
-      mManager.saveCookies(uri, headers);
-      final InputStream content = mManager.saveToCache(uri, mStatusCode.get(), headers, getInputStream(cn));
-      try {
-        if (mCallback != null) {
-          return mCallback.onSuccess(mStatusCode.get(), headers, content);
-        }
-      } finally {
-        IOUtils.closeQuietly(content);
+      final CookieManager cookieManager = mHttpManager.getCookieManager();
+      final CacheManager cacheManager = mHttpManager.getCacheManager();
+      cookieManager.put(uri, headers);
+      final int responseCode = cn.getResponseCode();
+      InputStream content = getInputStream(cn);
+      if (responseCode == HttpURLConnection.HTTP_OK && mCachePolicy.shouldCache(uri)) {
+        content = cacheManager.put(uri, headers, content);
+      } else if (responseCode == HttpURLConnection.HTTP_NOT_MODIFIED && mCachePolicy.shouldCache(uri)) {
+        content = cacheManager.update(uri, headers);
       }
+      return onSuccessInternal(responseCode, headers, content);
     } catch (Exception e) {
       throw onException(new HttpException(getEncodedUrlInternal(), e));
+    }
+  }
+
+  private V onSuccessInternal(int statusCode, @NonNull Map<String, List<String>> headers,
+                              @NonNull InputStream content) throws Exception {
+    mStatusCode.compareAndSet(mStatusCode.get(), statusCode);
+    try {
+      if (mCallback != null) {
+        return mCallback.onSuccess(mStatusCode.get(), headers, content);
+      }
+    } finally {
+      IOUtils.closeQuietly(content);
     }
     return null;
   }

@@ -25,7 +25,7 @@ import java.net.HttpURLConnection;
 /**
  * @author Daniel Serdyukov
  */
-class PutTask<V> extends HeadTask<V> {
+class PutTask<V> extends PostTask<V> {
 
   protected PutTask(@NonNull String url) {
     super(url);
@@ -38,7 +38,7 @@ class PutTask<V> extends HeadTask<V> {
   }
 
   @Override
-  protected void onPrepareConnection(HttpURLConnection cn) throws Exception {
+  protected void onPrepareConnection(@NonNull HttpURLConnection cn) throws Exception {
     super.onPrepareConnection(cn);
     cn.setDoOutput(true);
   }

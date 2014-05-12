@@ -19,6 +19,7 @@ package com.exzogeni.dk.http.task;
 import android.support.annotation.NonNull;
 
 import com.exzogeni.dk.http.Http;
+import com.exzogeni.dk.http.cache.CachePolicy;
 
 /**
  * @author Daniel Serdyukov
@@ -26,7 +27,7 @@ import com.exzogeni.dk.http.Http;
 class GetTask<V> extends HeadTask<V> {
 
   protected GetTask(@NonNull String url) {
-    super(url);
+    super(url, CachePolicy.DEFAULT);
   }
 
   @NonNull

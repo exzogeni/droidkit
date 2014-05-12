@@ -21,6 +21,7 @@ import android.support.annotation.NonNull;
 
 import com.exzogeni.dk.http.Http;
 import com.exzogeni.dk.http.HttpTask;
+import com.exzogeni.dk.http.cache.CachePolicy;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,7 +32,11 @@ import java.net.URISyntaxException;
 class HeadTask<V> extends HttpTask<V> {
 
   protected HeadTask(@NonNull String url) {
-    super(url);
+    this(url, CachePolicy.NO_CACHE);
+  }
+
+  protected HeadTask(@NonNull String url, @NonNull CachePolicy policy) {
+    super(url, policy);
   }
 
   @NonNull

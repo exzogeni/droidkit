@@ -20,6 +20,7 @@ import android.support.annotation.NonNull;
 
 import com.exzogeni.dk.log.Logger;
 
+import java.io.IOException;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -54,7 +55,7 @@ public abstract class BufferPool<T> {
 
   @NonNull
   private T allocateBufferInternal() {
-    Logger.warn("allocate new buffer");
+    Logger.error(new IOException("allocate new buffer"));
     return allocateBuffer();
   }
 
